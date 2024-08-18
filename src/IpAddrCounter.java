@@ -21,9 +21,13 @@ public class IpAddrCounter {
 	private final static String IP_REGEX = "^((25[0-5]|(2[0-4]|1\\d|[1-9]|)\\d)\\.?\\b){4}$";
 
 	private final boolean validateAddresses;
-	private final BitSet countedAddresses1 = new BitSet(Integer.MAX_VALUE); // addresses < Integer.MAX_VALUE
-	private final BitSet countedAddresses2 = new BitSet(Integer.MAX_VALUE); // addresses > Integer.MAX_VALUE
 
+	private final BitSet[] countedAddresses = new BitSet[] {
+			new BitSet(0x40000000), // 0x00000000 - 0x3FFFFFFF
+			new BitSet(0x40000000), // 0x40000000 - 0x7FFFFFFF
+			new BitSet(0x40000000), // 0x80000000 - 0xBFFFFFFF
+			new BitSet(0x40000000)  // 0x8C000000 - 0xFFFFFFFF
+	};
 
 	private long uniqueAddressesAmount = 0;
 	/**
@@ -41,13 +45,10 @@ public class IpAddrCounter {
 			}
 
 			long ip = ipStringToLongIp(line);
+			int firstTwoIpBits = (int) ((ip & 0b11000000000000000000000000000000) >> 30);
+			int restBits =       (int)  (ip & 0b00111111111111111111111111111111);
 
-			if (ip <= Integer.MAX_VALUE) {
-				count(countedAddresses1, (int) ip);
-			} else {
-				ip = ip & 0b01111111111111111111111111111111;
-				count(countedAddresses2, (int) ip);
-			}
+			count(countedAddresses[firstTwoIpBits], restBits);
 
 			line = reader.readLine();
 		}
